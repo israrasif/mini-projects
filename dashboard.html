@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    
+    <style>
+        table {
+        font-family: Arial, Helvetica, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+        }
+
+        table td, table th {
+        border: 1px solid #ddd;
+        padding: 8px;
+        }
+
+        table tr:nth-child(even){background-color: #f2f2f2;}
+
+        table tr:hover {background-color: #ddd;}
+
+        table th {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        text-align: left;
+        background-color: #4CAF50;
+        color: white;
+        }
+
+        a{
+            text-decoration: none;
+        }
+        a:visited{
+            color: blue;
+        }
+        a:hover{
+            color: red;
+        }
+        #header{
+            width: 100%;
+            display: flex;
+            flex-wrap: nowrap;
+        }
+        .dash{
+            width : 33.3%;
+            height: 100%;
+            display: block;
+            border: 3px solid black;
+            margin: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 40px;
+        }
+        .dash p{
+            font-size: 20px;
+            text-decoration: none;
+        }
+        form{
+            margin: 15px;
+            align-self: right;
+        }
+        #order{
+            width: 50%;
+        }
+        form{
+            position:relative;
+            float:right;
+        }
+        
+        #modalDisplay{
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 3px solid black;
+            background-color: rgb(241, 241, 241);
+            width: 600px;
+            max-width: 100%;
+            height: 400px;
+            max-height: 100%;
+            overflow: auto;
+        }
+        #closeModal{
+           position: relative;
+           left: 550px;
+           bottom: 125px;
+        }
+        #piechart{
+            width: 50%;
+        }
+        #orderDistribution{
+            text-align: center;
+            align-items: center;
+            width: 100%
+        }
+        .orderDistSub{
+            width: 100%;
+            display: flex
+        }
+        .orderDistSub table{
+            width: 50%
+        }
+        #closeModal{
+            background-color: crimson;
+            border-radius: 4px;
+            border: 1px solid white;
+            color:rgb(241, 241, 241);
+        }
+        
+    </style>
+</head>
+<body>
+    <div id="div1">
+
+    </div>    
+   
+    <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+    <script crossorigin src="https://unpkg.com/babel-standalone@6.26.0/babel.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="customer-data.json"></script>
+    <script type="text/babel">
+
+
+        const div1 = document.getElementById('div1')
+
+        const {useState, useEffect} = React
+ 
+        function Dashborad (props) {
+            const [custData, setCustData] = useState([])
+            const [modal, setModal] = useState([])
+            const [searchVal, setSearchVal] = useState()
+            
+            useEffect(() => {
+                axios.get("customer-data.json")
+                    .then((resp) => {
+                        //fetch and set customer data
+                        setCustData(resp.data)
+                    })
+            }, [])
+
+            //Total amount display in card
+            let finalTotal = 0
+            custData.forEach((ele) => {
+                finalTotal += ele.Amount
+            })
+            
+
+            //only once customer array
+            let totalCustomers = []
+            const filteredCust = []
+            custData.filter((ele, i) => {
+                if (!totalCustomers.includes(ele.Phone)){
+                    totalCustomers.push(ele.Phone)
+                    filteredCust.push(ele)
+                }
+            })
+
+            //modal 
+            //modal total display
+            let total = 0
+            if(modal.length){
+                const ordrCount = modal.length,
+                name = modal[0].Name
+                modal.map((ele) => {
+                    total += ele.Amount 
+                })
+            }
+
+            //search user to display in modal
+            const showUser = (userPhone) => {
+                const filtered = custData.filter((ele) => {
+                    return userPhone == ele.Phone
+                })
+                setModal(filtered)
+            }
+
+            //Order distribution chart and table
+            let once = 0,
+                twice = 0,
+                thrice = 0,
+                four = 0,
+                fivePlus = 0
+
+            for (let customer of totalCustomers){
+                const filtered = custData.filter((cust) => {
+                    return customer == cust.Phone
+                    })
+
+                    if(filtered.length == 1){
+                        once += 1
+                    }else if(filtered.length == 2){
+                        twice += 2
+                    }else if(filtered.length == 3){
+                        thrice += 3
+                    }else if(filtered.length == 4){
+                        four += 4
+                    }else {
+                        fivePlus += filtered.length
+                    }
+            }
+
+            //Piechart from google chart
+            google.charts.load('current', {'packages':['corechart']});
+            google.charts.setOnLoadCallback(drawChart);
+
+            function drawChart() {
+
+                var data = google.visualization.arrayToDataTable([
+                ['Orders', 'No. of orders'],
+                ['Once', once],
+                ['Twice', twice],
+                ['Thrice', thrice],
+                ['Four times', four],
+                ['Five+ times', fivePlus]
+                ]);
+
+                var options = {
+                title: ''
+                };
+
+                var chart = new google.visualization.PieChart(document.getElementById('piechart'));
+
+                chart.draw(data, options);
+            }
+
+            //search bar input 
+            const inputFill = (e) => {
+                const input = e.target.value
+                setSearchVal(input)
+            }
+
+            //search onSubmit event
+            const searchCust = (e) => {
+                e.preventDefault()
+                const filtered = custData.filter((cust) => {
+                    if(searchVal.toLowerCase() == cust.Name.toLowerCase()){
+                        return cust
+                    }else if (searchVal == cust.Phone){
+                        return cust
+                    }
+                    })
+
+                    if(filtered.length) {
+                        setModal(filtered)
+                        setSearchVal('')
+                    }else {
+                        setModal(['error'])
+                    }
+            }
+
+            //close button in modal 
+            const closeModal = () => {
+                setModal([])
+            }
+
+            //HTML
+            return (
+                <div>
+                    {/*header cards*/}
+                    <h1>Customer Dashboard</h1>
+                    <div id='header'>
+                        <h2 className='dash'>{custData.length} 
+                            <p>orders</p>
+                        </h2>
+                        <h2 className='dash'>{finalTotal}
+                            <p>Total Amount</p>
+                        </h2>
+                        <h2 className='dash'>{totalCustomers.length}
+                            <p>Customers</p>
+                        </h2>
+                    </div>
+
+                    <div id='listDiv'>
+                        {/*search bar*/}
+                        <form onSubmit={searchCust}>
+                            {modal[0] == 'error' && <span style={{color : 'red'}}>record not found!!  </span>}
+                            <input style={{borderRadius: '12px'}} type="text" value={searchVal} onChange={inputFill} placeholder='search' />
+                        </form>
+
+                        <h2>Listing Customers</h2>
+                        {/*Customers table*/}
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>id</th>
+                                    <th>Name</th>
+                                    <th>Mobile</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredCust.map((ele, i) => {
+                                    
+                                    return (
+                                        <tr key={i}>
+                                            <td>{i+1}</td>
+                                            <td>{ele.Name}</td>
+                                            <td>{ele.Phone}</td>
+                                            <td><a href="#" onClick={() => {showUser(ele.Phone)}}>Show</a></td>
+                                        </tr>
+                                    )
+                                }
+                                )}
+                                
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/*Order Distribution table & pie chart*/}
+                    <div id="orderDistribution">
+                        <h2>Order Distribution</h2>
+                        <div className='orderDistSub'>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>No.of Orders</th>
+                                        <th>Count of numbers </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>1</td>
+                                        <td>{once}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>2</td>
+                                        <td>{twice}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>3</td>
+                                        <td>{thrice}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>4</td>
+                                        <td>{four}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>5+</td>
+                                        <td>{fivePlus}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div id="piechart"></div>
+                        </div>
+                    </div>
+
+
+                    {/*modal display with length condition*/}
+                    {modal.length >= 1 && modal[0] != 'error' &&
+                    <div id='modalDisplay'>
+                        <h2>{modal[0].Name} - {modal[0].Phone}</h2>
+                        <h4>Order Count - {modal.length}</h4>
+                        <h4>Total Amount - {total}</h4>
+                        <button id='closeModal' onClick={closeModal}>X</button>
+                        <div>
+                            <table id='modalTable'>
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Dates</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {
+                                    modal.map((ele, i) => {
+                                            return (
+                                            <tr key={i}>
+                                                <td>{i + 1}</td>
+                                                <td>{ele.Date}</td>
+                                                <td>{ele.Amount}</td>
+                                            </tr>)
+                                        })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>}
+                </div>
+            )
+        }
+
+        ReactDOM.render(<Dashborad/>, div1)
+    </script>
+</body>
+</html>
